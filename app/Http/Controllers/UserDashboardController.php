@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Task;
+use App\Http\Controllers\TaskNotification;
+
 
 
 class UserDashboardController extends Controller
@@ -24,6 +26,9 @@ class UserDashboardController extends Controller
             ->firstOrFail();
         // Update the task status
         $task->update(['status' => 'completed']);
+        if ($task->user) {
+            $task->user->notify(new TaskNotification($task, 'updated'));
+        }
         return redirect()->back()->with('success', 'Task status updated successfully!');
     }
 }

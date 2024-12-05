@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\User;
+use App\Http\Controllers\TaskNotification;
 
 class TaskController extends Controller
 {
@@ -140,7 +141,7 @@ public function assignTaskToUser($taskId)
     // Get all active users (assuming 'active' status means users with at least one active task)
     $users = User::withCount('tasks')
                 ->whereHas('tasks', function ($query) {
-                    $query->whereNull('completed_at');  // Get only active tasks
+                    $query->whereNull('updated_at');  // Get only active tasks
                 })
                 ->get();
 
@@ -159,6 +160,13 @@ public function assignTaskToUser($taskId)
     $task = Task::findOrFail($taskId);
     $task->user_id = $userToAssign->id;  // Assign the task to the user
     $task->save();
+
+    $user = User::withCount(['tasks' => function ($query) {
+        $query->whereNull('updated_at');
+    }])->orderBy('tasks_count')->first();
+
+    $user->notify(new TaskNotification($task, 'assigned'));
+
 
     // Redirect or return response
     return redirect()->route('tasks.index')->with('success', 'Task successfully assigned to ' . $userToAssign->name);
